@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Catch the Falling Objects</title>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            font-family: Arial, sans-serif;
+            background-color: #f0f0f0;
+            margin: 0;
+        }
+
+        h1 {
+            margin: 20px;
+        }
+
+        #gameArea {
+            position: relative;
+            width: 300px;
+            height: 400px;
+            border: 2px solid #333;
+            overflow: hidden;
+            background-color: #fff;
+        }
+
+        #basket {
+            position: absolute;
+            bottom: 10px;
+            left: 50%;
+            width: 50px;
+            height: 20px;
+            background-color: #00f; /* Default color */
+            transform: translateX(-50%);
+        }
+
+        #object {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            background-color: #f00;
+            border-radius: 50%;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        #score {
+            margin-top: 20px;
+            font-size: 20px;
+        }
+
+        #skinSelector {
+            margin-top: 20px;
+        }
+
+        .skin {
+            width: 30px;
+            height: 20px;
+            display: inline-block;
+            margin: 0 5px;
+            cursor: pointer;
+            border: 2px solid transparent;
+        }
+
+        .skin.selected {
+            border-color: #000; /* Highlight selected skin */
+        }
+    </style>
+</head>
+<body>
+    <h1>Catch the Falling Objects!</h1>
+    <div id="gameArea">
+        <div id="basket"></div>
+        <div id="object"></div>
+    </div>
+    <div id="score">Score: 0</div>
+
+    <div id="skinSelector">
+        <div class="skin" style="background-color: #00f;" data-skin="blue"></div>
+        <div class="skin" style="background-color: #f0c;" data-skin="pink"></div>
+        <div class="skin" style="background-color: #0f0;" data-skin="green"></div>
+        <div class="skin" style="background-color: #ff0;" data-skin="yellow"></div>
+        <div class="skin" style="background-color:aqua;" data-skin="aqua"></div>
+    </div>
+
+    <audio id="catchSound" src="catch.mp3"></audio>
+    <audio id="missSound" src="miss.mp3"></audio>
+
+    <script>
+        const basket = document.getElementById("basket");
+        const object = document.getElementById("object");
+        const scoreDisplay = document.getElementById("score");
+        const skins = document.querySelectorAll(".skin");
+        const catchSound = document.getElementById("catchSound");
+        const missSound = document.getElementById("missSound");
+        let score = 0;
+        let objectFalling = false;
+        let isGameOver = false;
+
+        // Set default skin
+        let currentSkin = "blue";
+
+        // Add skin selection functionality
+        skins.forEach(skin => {
+            skin.addEventListener("click", () => {
+                currentSkin = skin.dataset.skin; // Get the selected skin
+                basket.style.backgroundColor = skin.style.backgroundColor; // Change basket color
+                skins.forEach(s => s.classList.remove("selected")); // Remove previous selection
+                skin.classList.add("selected"); // Highlight the selected skin
+            });
+        });
+
+        document.addEventListener("mousemove", (e) => {
+            if (isGameOver) return; // Prevent movement if game is over
+            const basketRect = basket.getBoundingClientRect();
+            const gameAreaRect = document.getElementById("gameArea").getBoundingClientRect();
+            
+            let basketX = e.clientX - gameAreaRect.left - basketRect.width / 2;
+            
+            // Ensure the basket stays within the game area
+            if (basketX < 0) basketX = 0;
+            if (basketX > gameAreaRect.width - basketRect.width) basketX = gameAreaRect.width - basketRect.width;
+            
+            basket.style.left = basketX + "px";
+        });
+
+        function dropObject() {
+            if (isGameOver) return; // Prevent dropping objects if the game is over
+            const gameArea = document.getElementById("gameArea");
+            const gameAreaRect = gameArea.getBoundingClientRect();
+            
+            object.style.left = Math.random() * (gameAreaRect.width - 20) + "px";
+            object.style.top = "0px";
+            objectFalling = true;
+
+            const fallInterval = setInterval(() => {
+                const objectRect = object.getBoundingClientRect();
+                let objectY = parseFloat(object.style.top);
+                
+                if (objectY < gameAreaRect.height - objectRect.height) {
+                    object.style.top = objectY + 2 + "px"; // Move down
+                } else {
+                    clearInterval(fallInterval);
+                    objectFalling = false;
+                    isGameOver = true; // Set game over if object misses
+                    missSound.play(); // Play miss sound
+                    alert("Game Over! Your final score is: " + score);
+                    resetGame(); // Reset game state
+                }
+
+                // Check for collision with the basket
+                if (isColliding(objectRect, basket.getBoundingClientRect())) {
+                    score++;
+                    scoreDisplay.textContent = "Score: " + score;
+                    clearInterval(fallInterval);
+                    object.style.top = "0px"; // Reset position
+                    objectFalling = false;
+                    catchSound.play(); // Play catch sound
+                }
+            }, 20);
+        }
+
+        function isColliding(rect1, rect2) {
+            return !(
+                rect1.top + rect1.height < rect2.top ||
+                rect1.bottom > rect2.bottom ||
+                rect1.left + rect1.width < rect2.left ||
+                rect1.right > rect2.right
+            );
+        }
+
+        function resetGame() {
+            score = 0;
+            scoreDisplay.textContent = "Score: " + score;
+            object.style.top = "0px"; // Reset object position
+            isGameOver = false; // Reset game over state
+        }
+
+        // Start the game
+        setInterval(() => {
+            if (!objectFalling && !isGameOver) {
+                dropObject();
+            }
+        }, 2000);
+    </script>
+</body>
+</html>
